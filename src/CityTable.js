@@ -1,52 +1,38 @@
 import React, {useState,useEffect} from 'react';
+import moment from 'moment';
 import './CityTable.css';
 
 export default function CityTables(){
-  const [cities,setCities]=useState([]);
-  const [lastMeasurments,setLatsMeasurments]=useState([]);
+  const [cities,setCities]=useState([])
 
 useEffect(()=>{
   const fetchCities= async()=> {
-    const listA= await fetch("https://api.openaq.org/v1/cities?country=DE&limit=10000")
+    function checkZero(measure){
+      return measure.measurements[0].value>0
+    }
+    function checkDate(measure){
+      const measureDate= moment(measure.measurements[0].lastUpdated)
+      const threeDaysBefore= moment().subtract(7,'days')
+      return measureDate>=threeDaysBefore
+    }
+
+    const listA= await fetch("https://api.openaq.org/v1/latest?country=FR&parameter=pm25&limit=10000")
       .then(response=>response.json())
       .then(response=>response.results)
-      .then(response=>response.map(element=>(element.city)))
-    setCities(listA)  
+      .then(response=>response.filter(checkZero))
+      .then(response=>response.filter(checkDate))
+      setCities(listA)
+
   }
   fetchCities()
 },[])
 
-useEffect(()=>{
-  const fetchMeasurments= async()=>{
-    const listB = await cities.map(city=>(
-      fetch("https://api.openaq.org/v1/latest?country=DE&city="+city+"&parameter=pm25")
-      .then(response=>response.json())
-      .then(response=>response.results[0])
-      .then(response=>console.log(response))
-      ))
-    setLatsMeasurments(listB)
-  }
-  fetchMeasurments()
-},cities!=[]||[])
-
   return(
     <div>
       <p>Moje wypociny</p>
-        {lastMeasurments.map(lastMeasure=>(
-          <li>
-          <h1>{lastMeasure}</h1>
-          {/* <p>{lastMeasure.measurements.value}</p> */}
-          </li>
+        {cities.map(city=>(
+          <li>{city.city} pm2.5 is: {city.measurements[0].value} </li>
         ))}
     </div>
   );
 }
-
-
-// const listB = await listA.map(city=>(
-//   fetch("https://api.openaq.org/v1/latest?country=DE&city="+city+"&parameter=pm25")
-// .then(response=>response.json())
-// .then(response=>response.results[0])
-// .then(response=>console.log(response))
-// ))
-// .then(response=>setData(response))
